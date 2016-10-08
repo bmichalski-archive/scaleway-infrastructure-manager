@@ -152,17 +152,30 @@ module.exports = (conf) => {
     })
   }
 
-  const listServers = (servers) => {
-    getServersByName().then((serversByName) => {
-      servers.forEach((server) => {
-        const serverName = server.name
-        const serverByName = serversByName[serverName]
+  const listServers = (expectedServers) => {
+    return getServersByName().then((actualServersByName) => {
+      const expectedServersInfo = []
 
-        if (undefined === serverByName) {
-          console.log(util.format('Missing server "%s"', serverName))
+      expectedServers.forEach((expectedServer) => {
+        const serverName = expectedServer.name
+        const actualServer = actualServersByName[serverName]
+
+        if (undefined === actualServer) {
+          expectedServersInfo.push({
+            name: serverName,
+            present: false
+          })
         } else {
-          console.log(serverByName)
+          expectedServersInfo.push({
+            name: serverName,
+            present: true,
+            info: actualServer
+          })
         }
+      })
+
+      return new Promise((resolve) => {
+        resolve(expectedServersInfo)
       })
     })
   }
@@ -291,6 +304,50 @@ module.exports = (conf) => {
     })
   }
 
+  const waitUntil = (checkWaitUntil, serversToWaitFor, withServers) => {
+    let startedAt = Date.now()
+
+    const checkServerStatuses = () => {
+      return getServersByName().then((actualServersByName) => {
+        const countExpectedServers = serversToWaitFor.length
+        let noLongerWaitAfterServersCount = 0
+        const serversData = []
+        const waitingFor = (Date.now() - startedAt) / 1000
+
+        serversToWaitFor.forEach((serverToWaitFor) => {
+          const serverName = serverToWaitFor.name
+          const actualServer = actualServersByName[serverName]
+          const present = undefined !== actualServer
+          const data = {
+            name: serverName,
+            present,
+            waitingFor
+          }
+
+          if (present) {
+            data.info = actualServer
+          }
+
+          serversData.push(data)
+
+          if (checkWaitUntil(actualServer)) {
+            noLongerWaitAfterServersCount += 1
+          }
+        })
+
+        const done = countExpectedServers === noLongerWaitAfterServersCount
+
+        withServers(serversData)
+
+        if (!done) {
+          return Promise.delay(1000).then(checkServerStatuses)
+        }
+      })
+    }
+
+    return checkServerStatuses()
+  }
+
   return {
     getImages,
     makeServer,
@@ -299,6 +356,7 @@ module.exports = (conf) => {
     deleteStoppedServers,
     listServers,
     startServers,
-    terminateServers
+    terminateServers,
+    waitUntil
   }
 }
