@@ -1,0 +1,16 @@
+{
+  "name": "@bmichalski/scaleway-infrastructure-manager",
+  "description": "Scaleway infrastructure manager",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bmichalski-js/scaleway-infrastructure-manager.git"
+  },
+  "version": "0.0.1",
+  "main": "index.js",
+  "dependencies": {
+    "bluebird": "^2.11.0",
+    "lodash": "^4.16.4",
+    "scaleway": "^0.8.0"
+  }
+}
