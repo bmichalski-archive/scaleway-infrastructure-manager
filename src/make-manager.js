@@ -348,6 +348,33 @@ module.exports = (conf) => {
     return checkServerStatuses()
   }
 
+  const doLocal = (serversToActOn, doLocal) => {
+    return getServersByName().then((actualServersByName) => {
+      const promises = []
+
+      serversToActOn.forEach((serverToActOn) => {
+        const serverName = serverToActOn.name
+        const actualServer = actualServersByName[serverName]
+
+        if (undefined === actualServer) {
+          console.log(util.format('Doing nothing with server "%s": server is not available', serverName))
+
+          return
+        }
+
+        promises.push(doLocal(actualServer))
+      })
+
+      if (promises.length > 0) {
+        return Promise.all(promises).then(() => {
+          console.log('Done acting on servers')
+        })
+      }
+
+      console.log('Nothing has been done with any server')
+    })
+  }
+
   return {
     getImages,
     makeServer,
@@ -357,6 +384,7 @@ module.exports = (conf) => {
     listServers,
     startServers,
     terminateServers,
-    waitUntil
+    waitUntil,
+    doLocal
   }
 }
