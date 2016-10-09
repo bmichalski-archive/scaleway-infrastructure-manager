@@ -9,8 +9,8 @@
   "version": "0.0.1",
   "main": "index.js",
   "dependencies": {
-    "bluebird": "^2.11.0",
+    "bluebird": "^3.4.6",
     "lodash": "^4.16.4",
-    "scaleway": "^0.8.0"
+    "superagent": "^2.3.0"
   }
 }

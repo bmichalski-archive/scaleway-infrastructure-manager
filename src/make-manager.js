@@ -1,27 +1,42 @@
 'use strict'
 
+process.on('unhandledRejection', (reason) => {
+  throw reason
+})
+
 const Promise = require('bluebird')
-const Api = require('scaleway')
+const superagentRequest = require('superagent')
 const util = require('util')
 const _ = require('lodash')
 
 module.exports = (conf) => {
-  const client = new Api({
-    token: conf.apiToken
-  })
+  const request = (opts) => {
+    const rq = superagentRequest(opts.method, 'https://api.scaleway.com' + opts.uri)
+      .set('Content-Type', 'application/json')
+      .set('X-Auth-Token', conf.apiToken)
+
+    if (undefined !== opts.body) {
+      rq.send(opts.body)
+    }
+
+    return rq
+  }
 
   const getImages = () => {
     console.log('Getting images.')
 
     return new Promise((resolve) => {
-      client.get('/images').then((res) => {
+      request({
+        method: 'GET',
+        uri: '/images'
+      }).then((res) => {
         resolve(res.body.images)
       })
     })
   }
 
   const makeServer = (name, serverType, imageId, tags) => {
-    const serverData = {
+    const body = {
       name: name,
       organization: conf.organization,
       commercial_type: serverType,
@@ -31,8 +46,11 @@ module.exports = (conf) => {
 
     console.log(util.format('Making server "%s" of type "%s"', name, serverType))
 
-    return client
-      .post('/servers', serverData)
+    return request({
+      method: 'POST',
+      uri: '/servers',
+      body
+    })
       .then(() => {
         console.log(util.format('Successfully made server "%s"', name))
       })
@@ -40,7 +58,10 @@ module.exports = (conf) => {
 
   const getServersByName = () => {
     return new Promise((resolve) => {
-      client.get('/servers').then((res) => {
+      request({
+        method: 'GET',
+        uri: '/servers'
+      }).then((res) => {
         const servers = res.body.servers
 
         const serversByName = {}
@@ -107,8 +128,10 @@ module.exports = (conf) => {
           })
 
           promises.push(
-            client
-              .delete('/servers/' + serverId)
+            request({
+              method: 'DELETE',
+              uri: '/servers/' + serverId
+            })
               .then(() => {
                 console.log(util.format('Done deleting server "%s"', serverName))
 
@@ -121,8 +144,10 @@ module.exports = (conf) => {
                     console.log(util.format('Deleting volume "%s" for server "%s"', serverVolumeId, serverName))
 
                     promises.push(
-                      client
-                        .delete('/volumes/' + serverVolumeId)
+                      request({
+                        method: 'DELETE',
+                        uri: '/volumes/' + serverVolumeId
+                      })
                         .then(() => {
                           console.log(util.format('Done deleting volume "%s" for server "%s"', serverVolumeId, serverName))
                         })
@@ -204,8 +229,10 @@ module.exports = (conf) => {
             }
 
             promises.push(
-              client
-                .get('/servers/' + serverId + '/action')
+              request({
+                method: 'GET',
+                uri: '/servers/' + serverId + '/action'
+              })
                 .then((res) => {
                   const actions = res.body.actions
 
@@ -217,8 +244,13 @@ module.exports = (conf) => {
 
                   console.log(util.format('Starting server "%s"', serverName))
 
-                  return client
-                    .post('/servers/' + serverId + '/action', { action: powerOnAction })
+                  return request({
+                    method: 'POST',
+                    uri: '/servers/' + serverId + '/action',
+                    body: {
+                      action: powerOnAction
+                    }
+                  })
                     .then(() => {
                       console.log(util.format('Done starting server "%s"', serverName))
                     })
@@ -266,8 +298,10 @@ module.exports = (conf) => {
             }
 
             promises.push(
-              client
-                .get('/servers/' + serverId + '/action')
+              request({
+                method: 'GET',
+                uri: '/servers/' + serverId + '/action'
+              })
                 .then((res) => {
                   const actions = res.body.actions
 
@@ -279,8 +313,13 @@ module.exports = (conf) => {
 
                   console.log(util.format('Terminating server "%s"', serverName))
 
-                  return client
-                    .post('/servers/' + serverId + '/action', { action: terminateAction })
+                  return request({
+                    method: 'POST',
+                    uri: '/servers/' + serverId + '/action',
+                    body: {
+                      action: terminateAction
+                    }
+                  })
                     .then(() => {
                       console.log(util.format('Done terminating server "%s"', serverName))
                     })
